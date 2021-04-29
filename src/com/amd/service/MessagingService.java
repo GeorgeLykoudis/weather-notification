@@ -6,6 +6,6 @@ package com.amd.service;
  */
 public interface MessagingService extends Runnable {
 
-    void weatherTemperatureSmsNotification();
+    void weatherTemperatureSmsNotification() throws Exception;
 
 }

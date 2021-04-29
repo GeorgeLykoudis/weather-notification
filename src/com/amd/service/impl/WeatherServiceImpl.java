@@ -1,5 +1,7 @@
 package com.amd.service.impl;
 
+import com.amd.exceptions.CityNotFoundException;
+import com.amd.exceptions.NotAuthorizedException;
 import com.amd.service.WeatherService;
 
 import java.io.IOException;
@@ -29,7 +31,7 @@ public class WeatherServiceImpl implements WeatherService {
      * @return an HttpResponse with String as body type.
      */
     @Override
-    public HttpResponse<String> getWeatherTemperature() {
+    public HttpResponse<String> getWeatherTemperature() throws Exception {
         HttpClient client = HttpClient.newHttpClient();
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(URL))
@@ -39,9 +41,19 @@ public class WeatherServiceImpl implements WeatherService {
         HttpResponse<String> response = null;
         try {
             response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            if(response.statusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
+            throw new CityNotFoundException();
+            }
+            // unauthorized request
+            if(response.statusCode() == HttpURLConnection.HTTP_UNAUTHORIZED) {
+            throw new NotAuthorizedException();
+            }
         }
         catch (IOException | InterruptedException e) {
             e.printStackTrace();
+        }
+        catch (CityNotFoundException | NotAuthorizedException e) {
+        System.out.println(e.getMessage());
         }
         return response;
     }

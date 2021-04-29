@@ -8,6 +8,6 @@ import java.net.http.HttpResponse;
  */
 public interface WeatherService {
 
-    HttpResponse<String> getWeatherTemperature();
+    HttpResponse<String> getWeatherTemperature() throws Exception;
 
 }

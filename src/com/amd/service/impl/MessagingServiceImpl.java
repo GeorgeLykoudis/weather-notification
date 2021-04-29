@@ -1,5 +1,6 @@
 package com.amd.service.impl;
 
+import com.amd.exceptions.NotAuthorizedException;
 import com.amd.service.MessagingService;
 import com.amd.service.WeatherService;
 import org.json.JSONObject;
@@ -44,7 +45,7 @@ public class MessagingServiceImpl implements MessagingService, Runnable {
      * with information about the weather.
      */
     @Override
-    public void weatherTemperatureSmsNotification() {
+    public void weatherTemperatureSmsNotification() throws Exception {
         // Call OpenWeather API
         HttpResponse weatherApiResponse = weatherService.getWeatherTemperature();
         // If the call succeeds then proceed with the calls to Routee
@@ -54,17 +55,27 @@ public class MessagingServiceImpl implements MessagingService, Runnable {
             System.out.println(smsText);
 
             // Get Authenticated from Routee
-            HttpResponse authResponse = routeeRestConnection(URL_AUTH_TOKEN, "grant_type=client_credentials",
-                    "application/x-www-form-urlencoded", "Basic " + encodeBase64());
-
-            //If user is authenticated then send message
-            if(HttpURLConnection.HTTP_OK == authResponse.statusCode()) {
-                String accessToken = mapAuthToken(authResponse.body().toString()); // extract access token
-                String body = "{ \"body\" : \"" + smsText + "\", \"to\" : \""+ RECEIVER_NUMBER + "\", \"from\": \"amdTelecom\"}";
-                HttpResponse smsResponse = routeeRestConnection(URL_SMS, body, "application/json","Bearer "+accessToken);
-                if(HttpURLConnection.HTTP_OK == smsResponse.statusCode()) {
-                    System.out.println("A message sent");
+            try {
+                HttpResponse authResponse = routeeRestConnection(URL_AUTH_TOKEN, "grant_type=client_credentials",
+                        "application/x-www-form-urlencoded", "Basic " + encodeBase64());
+                if(HttpURLConnection.HTTP_UNAUTHORIZED == authResponse.statusCode()) {
+                    throw new NotAuthorizedException();
                 }
+
+                //If user is authenticated then send message
+                if(HttpURLConnection.HTTP_OK == authResponse.statusCode()) {
+                    String accessToken = mapAuthToken(authResponse.body().toString()); // extract access token
+                    String body = "{ \"body\" : \"" + smsText + "\", \"to\" : \""+ RECEIVER_NUMBER + "\", \"from\": \"amdTelecom\"}";
+                    HttpResponse smsResponse = routeeRestConnection(URL_SMS, body, "application/json","Bearer "+accessToken);
+                    if(HttpURLConnection.HTTP_OK == smsResponse.statusCode()) {
+                        System.out.println("A message sent");
+                    }
+                    if(HttpURLConnection.HTTP_UNAUTHORIZED == smsResponse.statusCode()) {
+                        throw new NotAuthorizedException();
+                    }
+                }
+            } catch(NotAuthorizedException e) {
+                System.out.println(e.getMessage());
             }
         }
     }
@@ -79,7 +90,6 @@ public class MessagingServiceImpl implements MessagingService, Runnable {
      * @return an HttpResponse with String as a body type.
      */
     private HttpResponse<String> routeeRestConnection(String url, String body, String contentType, String authorization) {
-
         HttpClient client = HttpClient.newHttpClient();
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(url))
@@ -154,6 +164,10 @@ public class MessagingServiceImpl implements MessagingService, Runnable {
     // will be executed from a thread
     @Override
     public void run() {
-        weatherTemperatureSmsNotification();
+        try {
+            weatherTemperatureSmsNotification();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }
