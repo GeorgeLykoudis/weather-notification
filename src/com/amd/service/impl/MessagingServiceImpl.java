@@ -2,7 +2,9 @@ package com.amd.service.impl;
 
 import com.amd.service.MessagingService;
 import com.amd.service.WeatherService;
+import org.json.JSONObject;
 
+import java.net.HttpURLConnection;
 import java.net.http.HttpResponse;
 
 /**
@@ -39,5 +41,42 @@ public class MessagingServiceImpl implements MessagingService {
     @Override
     public void weatherTemperatureSmsNotification() {
         HttpResponse weatherApiResponse = weatherService.getWeatherTemperature();
+        if(HttpURLConnection.HTTP_OK == weatherApiResponse.statusCode()) {
+            double temperature = mapWeatherTemperature(weatherApiResponse.body().toString());
+            String smsText = buildSmsText(temperature);
+            System.out.println(smsText);
+        }
+
+    }
+
+    /**
+     * Parse the response body from the OpenWeather call in order to
+     * extract the temperature.
+     *
+     * @param responseBody the HttpResponse from OpenWeather request
+     *                     in JSON format.
+     * @return a double with the temperature
+     */
+    private double mapWeatherTemperature(String responseBody) {
+        JSONObject weather = new JSONObject(responseBody);
+        JSONObject main_attribute = weather.getJSONObject(WEATHER_API_MAIN_ATTRIBUTE);
+        return main_attribute.getDouble(WEATHER_API_MAIN_TEMP_ATTRIBUTE);
+    }
+
+    /**
+     * Constructs the message to be sent based on the {@code temperature}
+     *
+     * @param temperature the temperature that retrieved from OpenWeather API.
+     * @return a String.
+     */
+    private String buildSmsText(double temperature) {
+        String message;
+        if(temperature > TEMPERATURE_FLOOR) {
+            message = SENDER_NAME + " and Temperature more than " + TEMPERATURE_FLOOR.intValue() + "C. " + temperature;
+        }
+        else {
+            message = SENDER_NAME + " and Temperature less than " + TEMPERATURE_FLOOR.intValue() + "C. " + temperature;
+        }
+        return message;
     }
 }
