@@ -10,7 +10,7 @@ import java.util.concurrent.TimeUnit;
 
 public class Main {
 
-    public static final int MAX_NUMBER_OF_SMS = 1;
+    public static final int MAX_NUMBER_OF_SMS = 10;
     public static final int SMS_SEND_PERIOD = 10;
     public static final int CANCEL_TASK_DELAY = SMS_SEND_PERIOD * MAX_NUMBER_OF_SMS - 1;
 
