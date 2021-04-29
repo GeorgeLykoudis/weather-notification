@@ -39,43 +39,24 @@ public class MessagingServiceImpl implements MessagingService, Runnable {
         weatherService = new WeatherServiceImpl();
     }
 
-    /**
-     * Calls the {@link WeatherService#getWeatherTemperature()} weather} service and
-     * sends an SMS to {@link #RECEIVER_NUMBER reciever} from {@link #SENDER_NAME sender}
-     * with information about the weather.
-     */
     @Override
     public void weatherTemperatureSmsNotification() throws Exception {
         // Call OpenWeather API
         HttpResponse weatherApiResponse = weatherService.getWeatherTemperature();
         // If the call succeeds then proceed with the calls to Routee
         if(HttpURLConnection.HTTP_OK == weatherApiResponse.statusCode()) {
-            double temperature = mapWeatherTemperature(weatherApiResponse.body().toString()); // extract temperature
-            String smsText = buildSmsText(temperature); // build the sms that will be sent
-            System.out.println(smsText);
-
             // Get Authenticated from Routee
             try {
                 HttpResponse authResponse = routeeRestConnection(URL_AUTH_TOKEN, "grant_type=client_credentials",
                         "application/x-www-form-urlencoded", "Basic " + encodeBase64());
-                if(HttpURLConnection.HTTP_UNAUTHORIZED == authResponse.statusCode()) {
-                    throw new NotAuthorizedException();
-                }
-
                 //If user is authenticated then send message
                 if(HttpURLConnection.HTTP_OK == authResponse.statusCode()) {
-                    String accessToken = mapAuthToken(authResponse.body().toString()); // extract access token
-                    String body = "{ \"body\" : \"" + smsText + "\", \"to\" : \""+ RECEIVER_NUMBER + "\", \"from\": \"amdTelecom\"}";
-                    HttpResponse smsResponse = routeeRestConnection(URL_SMS, body, "application/json","Bearer "+accessToken);
-                    if(HttpURLConnection.HTTP_OK == smsResponse.statusCode()) {
-                        System.out.println("A message sent");
-                    }
-                    if(HttpURLConnection.HTTP_UNAUTHORIZED == smsResponse.statusCode()) {
-                        throw new NotAuthorizedException();
-                    }
+                    sendMessage(weatherApiResponse.body().toString(), authResponse.body().toString());
+                } else if(HttpURLConnection.HTTP_UNAUTHORIZED == authResponse.statusCode()) {
+                    throw new NotAuthorizedException();
                 }
             } catch(NotAuthorizedException e) {
-                System.out.println(e.getMessage());
+                e.printStackTrace();
             }
         }
     }
@@ -159,6 +140,27 @@ public class MessagingServiceImpl implements MessagingService, Runnable {
             message = SENDER_NAME + " and Temperature less than " + TEMPERATURE_FLOOR.intValue() + "C. " + temperature;
         }
         return message;
+    }
+
+    /**
+     * Send the actual message after recieving the weather data
+     * and the access token from Routee API.
+     *
+     * @param weatherResponse the HttpResponse from OpenWeather API.
+     * @param authResponse the HttprResponse with the authorization token from Routee API.
+     * @throws NotAuthorizedException
+     */
+    private void sendMessage(String weatherResponse, String authResponse) throws NotAuthorizedException {
+        String accessToken = mapAuthToken(authResponse);
+        double temperature = mapWeatherTemperature(weatherResponse);
+        String smsText = buildSmsText(temperature);
+        String body = "{ \"body\" : \"" + smsText + "\", \"to\" : \""+ RECEIVER_NUMBER + "\", \"from\": \"amdTelecom\"}";
+        HttpResponse smsResponse = routeeRestConnection(URL_SMS, body, "application/json","Bearer "+accessToken);
+        if(HttpURLConnection.HTTP_OK == smsResponse.statusCode()) {
+            System.out.println("A message sent");
+        }else if(HttpURLConnection.HTTP_UNAUTHORIZED == smsResponse.statusCode()) {
+            throw new NotAuthorizedException();
+        }
     }
 
     // will be executed from a thread

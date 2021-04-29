@@ -25,17 +25,14 @@ public class Main {
                 SMS_SEND_PERIOD, TimeUnit.SECONDS);
 
         // A task to be executed after CANCEL_TASK_DELAY seconds
+        // where it terminates the scheduled task and then terminates
+        // the scheduler.
         Runnable cancelTask = () -> {
             scheduledTask.cancel(true); // cancel the task
             scheduler.shutdown();
         };
 
-        scheduler.schedule(cancelTask, CANCEL_TASK_DELAY, TimeUnit.SECONDS); // call the cancelTask task
-        try {
-            scheduler.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS); // wait for the task to complete the execution
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-
+        // call the cancelTask task
+        scheduler.schedule(cancelTask, CANCEL_TASK_DELAY, TimeUnit.SECONDS);
     }
 }

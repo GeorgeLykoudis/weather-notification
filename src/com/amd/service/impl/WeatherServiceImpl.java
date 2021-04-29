@@ -23,13 +23,6 @@ public class WeatherServiceImpl implements WeatherService {
     private static final String URL         = "https://api.openweathermap.org/data/2.5/weather?q=" +
             CITY_NAME + "&units=" + UNIT_METRIC + "&appid=" + API_KEY;
 
-    /**
-     * Calls the OpenWeather API in order to retrieve data
-     * for the city of Thessaloniki. The call will return
-     * the temperatures in Celsius.
-     *
-     * @return an HttpResponse with String as body type.
-     */
     @Override
     public HttpResponse<String> getWeatherTemperature() throws Exception {
         HttpClient client = HttpClient.newHttpClient();
@@ -42,18 +35,16 @@ public class WeatherServiceImpl implements WeatherService {
         try {
             response = client.send(request, HttpResponse.BodyHandlers.ofString());
             if(response.statusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
-            throw new CityNotFoundException();
-            }
-            // unauthorized request
-            if(response.statusCode() == HttpURLConnection.HTTP_UNAUTHORIZED) {
-            throw new NotAuthorizedException();
+                throw new CityNotFoundException();
+            } else if(response.statusCode() == HttpURLConnection.HTTP_UNAUTHORIZED) {
+                throw new NotAuthorizedException();
             }
         }
         catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
         catch (CityNotFoundException | NotAuthorizedException e) {
-        System.out.println(e.getMessage());
+            e.printStackTrace();
         }
         return response;
     }
