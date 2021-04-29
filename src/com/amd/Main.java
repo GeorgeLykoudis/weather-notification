@@ -1,8 +1,13 @@
 package com.amd;
 
+import com.amd.service.MessagingService;
+import com.amd.service.impl.MessagingServiceImpl;
+
 public class Main {
 
     public static void main(String[] args) {
-	// write your code here
+
+        MessagingService messagingService = new MessagingServiceImpl();
+
     }
 }
