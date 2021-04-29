@@ -16,7 +16,7 @@ import java.util.Base64;
  * @author George Lykoudis
  * @version 29/04/2021
  */
-public class MessagingServiceImpl implements MessagingService {
+public class MessagingServiceImpl implements MessagingService, Runnable {
 
     private static final String SENDER_NAME     = "George Lykoudis";
     private static final String RECEIVER_NUMBER = "+306978745957";
@@ -149,5 +149,11 @@ public class MessagingServiceImpl implements MessagingService {
             message = SENDER_NAME + " and Temperature less than " + TEMPERATURE_FLOOR.intValue() + "C. " + temperature;
         }
         return message;
+    }
+
+    // will be executed from a thread
+    @Override
+    public void run() {
+        weatherTemperatureSmsNotification();
     }
 }
